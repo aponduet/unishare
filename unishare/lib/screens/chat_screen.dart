@@ -1,13 +1,16 @@
-import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:unishare/models/connection.dart';
 import 'package:unishare/models/socket_id.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:sdp_transform/sdp_transform.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-
+import 'package:unishare/widgets/file_pick.dart';
 import '../widgets/chat_info.dart';
 import '../widgets/chat_text.dart';
+import 'package:path_provider/path_provider.dart';
 
 // ignore: must_be_immutable
 class ChatScreen extends StatefulWidget {
@@ -34,7 +37,9 @@ class ChatScreenState extends State<ChatScreen> {
   RTCDataChannel? receiveChannel;
   RTCDataChannel? receivechanell;
   RTCDataChannelInit? _dataChannelDict;
-
+  FilePickerResult? result;
+  late Uint8List item;
+  Uint8List? bytesData;
   //final String socketId = "1011";
 
   final Map<String, dynamic> configuration = {
@@ -180,7 +185,7 @@ class ChatScreenState extends State<ChatScreen> {
     sendchanell = await connections[id.destinationId]!
         .peer
         .createDataChannel("SendCnanell", _dataChannelDict!);
-    sendchanell!.onMessage = (message) {
+    sendchanell!.onMessage = (message) async {
       print("Message from Remote");
       if (message.type == MessageType.text) {
         print(message.text);
@@ -190,7 +195,16 @@ class ChatScreenState extends State<ChatScreen> {
           messageList.add(data);
         });
       } else {
-        print('No message received');
+        print(message.binary);
+
+        setState(() {
+          bytesData = message.binary;
+        });
+        //writeToDirectory(bytesData);
+        //List<int> bytelist = bytesData.toList();
+        // File originalFile =
+        //     await File("joining_letter.docx").writeAsBytes(bytelist);
+        // print(originalFile.length());
       }
     };
     sendchanell!.onDataChannelState = (state) => {print(state)};
@@ -306,7 +320,7 @@ class ChatScreenState extends State<ChatScreen> {
 
   void receiveChannelCallback(RTCDataChannel dataChannel) {
     receiveChannel = dataChannel;
-    dataChannel.onMessage = (message) {
+    dataChannel.onMessage = (message) async {
       print("Message from Local");
 
       if (message.type == MessageType.text) {
@@ -317,7 +331,15 @@ class ChatScreenState extends State<ChatScreen> {
           messageList.add(data);
         });
       } else {
-        print('No message received');
+        print(message.binary);
+        setState(() {
+          bytesData = message.binary;
+        });
+        //writeToDirectory(bytesData);
+        // List<int> bytelist = bytesData.toList();
+        // File originalFile =
+        //     await File("joining_letter.docx").writeAsBytes(bytelist);
+        // print(originalFile);
       }
     };
   }
@@ -394,6 +416,40 @@ class ChatScreenState extends State<ChatScreen> {
     });
 
     return allRemoteVideo;
+  }
+  //Save Incoming Files to Document Directory
+
+  Future<String> get _localPath async {
+    final directory = await getApplicationDocumentsDirectory();
+
+    return directory.path;
+  }
+
+  Future<File> get _localFile async {
+    final path = await _localPath;
+    return File('$path/sohelrana.jpg');
+  }
+
+  Future<File> writeToDirectory(Uint8List image) async {
+    final file = await _localFile;
+
+    // Write the file
+    //return file.writeAsBytes(image);
+    //final file = File('${(await getTemporaryDirectory()).path}/$path');
+    await file.writeAsBytes(
+        image.buffer.asUint8List(image.offsetInBytes, image.lengthInBytes));
+    print(file.path);
+
+    return file;
+  }
+
+  //Send File Handler
+  sendFileHandler() {
+    RTCDataChannelMessage binaryMessage =
+        RTCDataChannelMessage.fromBinary(item);
+    _offer
+        ? sendchanell!.send(binaryMessage)
+        : receiveChannel!.send(binaryMessage);
   }
 
   //Chat Input Handler
@@ -550,6 +606,16 @@ class ChatScreenState extends State<ChatScreen> {
                                 )),
                     )),
                   ),
+                  if (bytesData != null)
+                    Image.memory(
+                      bytesData!,
+                      width: 250,
+                      height: 200,
+                    ),
+                  if (result != null)
+                    FilePick(
+                      result: result,
+                    ),
                   SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -573,7 +639,36 @@ class ChatScreenState extends State<ChatScreen> {
                               width: 10,
                             ),
                             ElevatedButton(
-                                child: Text("Send"), onPressed: inputHandler)
+                                child: Text("Send"), onPressed: inputHandler),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            ElevatedButton(
+                                child: Text("Send file"),
+                                onPressed: sendFileHandler),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.attach_file),
+                              onPressed: () async {
+                                result = await FilePicker.platform.pickFiles(
+                                    //allowMultiple: false,
+                                    //type: FileType.any
+                                    );
+                                if (result == null) {
+                                  print("No file selected");
+                                } else {
+                                  setState(() {
+                                    item = result!.files[0].bytes!;
+                                  });
+                                  result?.files.forEach((element) {
+                                    //print(item);
+                                    //print(element.name);
+                                  });
+                                }
+                              },
+                            ),
                           ],
                         ),
                       )),
