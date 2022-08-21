@@ -606,12 +606,12 @@ class ChatScreenState extends State<ChatScreen> {
                                 )),
                     )),
                   ),
-                  if (bytesData != null)
-                    Image.memory(
-                      bytesData!,
-                      width: 250,
-                      height: 200,
-                    ),
+                  // if (bytesData != null)
+                  //   Image.memory(
+                  //     bytesData!,
+                  //     width: 250,
+                  //     height: 200,
+                  //   ),
                   if (result != null)
                     FilePick(
                       result: result,
@@ -654,8 +654,7 @@ class ChatScreenState extends State<ChatScreen> {
                               onPressed: () async {
                                 result = await FilePicker.platform.pickFiles(
                                     //allowMultiple: false,
-                                    //type: FileType.any
-                                    );
+                                    type: FileType.any);
                                 if (result == null) {
                                   print("No file selected");
                                 } else {
@@ -664,7 +663,7 @@ class ChatScreenState extends State<ChatScreen> {
                                   });
                                   result?.files.forEach((element) {
                                     //print(item);
-                                    //print(element.name);
+                                    print(element.name);
                                   });
                                 }
                               },

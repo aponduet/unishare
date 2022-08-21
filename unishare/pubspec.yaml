@@ -42,6 +42,8 @@ dependencies:
   wakelock: ^0.6.2
   device_info_plus: ^4.1.2
   shared_preferences: ^2.0.15
+  file_saver: ^0.1.1
+  syncfusion_flutter_pdfviewer: ^20.2.44-beta
 
 dev_dependencies:
   flutter_test:
